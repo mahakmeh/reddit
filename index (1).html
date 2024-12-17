@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typing Game</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="outer-box">
+        <div class="inner-box">
+            <div class="card">
+                <p id="sentence">Loading...</p> <!-- Display sentence here -->
+            </div>
+        </div>
+    </div>
+    <div class="game-stats">
+        <div class="stat-group">
+            <div class="stat-item">
+                <span class="stat-label">Time</span>
+                <span class="stat-value" id="timer">60s</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Sentences</span>
+                <span class="stat-value" id="sentences">0</span>
+            </div>
+        </div>
+        <div class="stat-group">
+            <div class="stat-item">
+                <span class="stat-label">WPM</span>
+                <span class="stat-value" id="wpm">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Accuracy</span>
+                <span class="stat-value" id="accuracy">100%</span>
+            </div>
+        </div>
+        <div class="stat-group extended-stats">
+            <div class="stat-item">
+                <span class="stat-label">Best WPM</span>
+                <span class="stat-value" id="best-wpm">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Chars/Min</span>
+                <span class="stat-value" id="chars-per-min">0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaderboard Section -->
+    <div class="leaderboard-section">
+        <h3>Leaderboard</h3>
+        <table id="leaderboard">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Player Name</th>
+                    <th>Score</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Leaderboard data will be dynamically inserted here -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Modal for submitting score -->
+    <div id="score-modal" class="score-modal">
+        <div class="modal-content">
+            <h4>Submit Your Score</h4>
+            <input type="text" id="player-name" placeholder="Enter your name" />
+            <input type="number" id="player-score" placeholder="Enter your score" />
+            <button onclick="submitScore()">Submit Score</button>
+            <button onclick="closeModal()">Close</button>
+        </div>
+    </div>
+
+    <script>
+        // Fetch random sentence from the backend
+        async function fetchRandomSentence() {
+            try {
+                const response = await fetch('http://localhost:3000/random-sentence');
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('sentence').textContent = data.sentence;
+                } else {
+                    document.getElementById('sentence').textContent = 'No sentence available';
+                }
+            } catch (error) {
+                console.error('Error fetching random sentence:', error);
+                document.getElementById('sentence').textContent = 'Error fetching sentence';
+            }
+        }
+
+        // Fetch top 5 leaderboard
+        async function fetchLeaderboard() {
+            try {
+                const response = await fetch('http://localhost:3000/leaderboard');
+                const data = await response.json();
+
+                const leaderboardBody = document.querySelector('#leaderboard tbody');
+                leaderboardBody.innerHTML = ''; // Clear previous leaderboard data
+
+                data.forEach((player, index) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td>${player.player_name}</td>
+                        <td>${player.score}</td>
+                    `;
+                    leaderboardBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error fetching leaderboard:', error);
+            }
+        }
+
+        // Submit score to the leaderboard
+        async function submitScore() {
+            const playerName = document.getElementById('player-name').value;
+            const playerScore = document.getElementById('player-score').value;
+
+            if (!playerName || !playerScore) {
+                alert('Please enter both your name and score');
+                return;
+            }
+
+            const data = {
+                player_name: playerName,
+                score: parseInt(playerScore)
+            };
+
+            try {
+                const response = await fetch('http://localhost:3000/leaderboard', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.text();
+                alert(result);
+                closeModal();
+                fetchLeaderboard(); // Refresh leaderboard after score submission
+            } catch (error) {
+                console.error('Error submitting score:', error);
+            }
+        }
+
+        // Open modal to submit score
+        function openModal(score) {
+            document.getElementById('player-score').value = score;
+            document.getElementById('score-modal').style.display = 'block';
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('score-modal').style.display = 'none';
+        }
+
+        // Call fetchLeaderboard when page loads to display top 5 players
+        window.onload = () => {
+            fetchRandomSentence();
+            fetchLeaderboard();
+        };
+    </script>
+
+    <script src="arena.js"></script>
+</body>
+</html>
